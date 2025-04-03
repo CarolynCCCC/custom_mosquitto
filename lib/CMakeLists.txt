@@ -114,14 +114,17 @@ if(WITH_BUNDLED_DEPS)
 endif()
 
 if(WITH_THREADING)
-	if(WIN32)
-		 target_link_libraries(libmosquitto PRIVATE PThreads4W::PThreads4W)
-	else()
-		set(THREADS_PREFER_PTHREAD_FLAG ON)
-		find_package(Threads REQUIRED)
-
-		target_link_libraries(libmosquitto PRIVATE Threads::Threads)
-	endif()
+ if (WIN32)
+    target_link_libraries(libmosquitto PUBLIC 
+        ${OPENSSL_LIBRARIES} 
+        ${PTHREAD_LIBRARIES}
+        ws2_32
+        crypt32)
+ else()
+    target_link_libraries(libmosquitto PUBLIC 
+        ${OPENSSL_LIBRARIES} 
+        ${PTHREAD_LIBRARIES})
+ endif()
 endif()
 
 target_link_libraries(libmosquitto

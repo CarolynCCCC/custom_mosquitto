@@ -1,9 +1,16 @@
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <sys/select.h>
+#endif
+
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
 #include <mosquitto/libmosquittopp.h>
+
 
 static int run = -1;
 

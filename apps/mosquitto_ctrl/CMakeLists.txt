@@ -54,13 +54,17 @@ if(WITH_TLS)
 	)
 
 	if(WITH_THREADING)
-		if(WIN32)
-			target_link_libraries(mosquitto_ctrl PRIVATE PThreads4W::PThreads4W)
-		else()
-			set(THREADS_PREFER_PTHREAD_FLAG ON)
-			find_package(Threads REQUIRED)
-			target_link_libraries(mosquitto_ctrl PRIVATE Threads::Threads)
-		endif()
+if (WIN32)
+    target_link_libraries(libmosquitto PRIVATE
+        ${OPENSSL_LIBRARIES} 
+        ${PTHREAD_LIBRARIES}
+        ws2_32
+        crypt32)
+else()
+    target_link_libraries(libmosquitto PRIVATE
+        ${OPENSSL_LIBRARIES} 
+        ${PTHREAD_LIBRARIES})
+endif()
 	endif()
 
 

@@ -178,6 +178,21 @@ int handle__publish(struct mosquitto *context)
 		base_msg->data.topic = topic_mount;
 	}
 
+	/* Handle per-user mount point if enabled and not an admin user */
+	if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0){
+		len = strlen(context->username) + strlen(base_msg->data.topic) + 2; /* +2 for '/' and null terminator */
+		topic_mount = mosquitto_malloc(len);
+		if(!topic_mount){
+			db__msg_store_free(base_msg);
+			return MOSQ_ERR_NOMEM;
+		}
+		snprintf(topic_mount, len, "%s/%s", context->username, base_msg->data.topic);
+		topic_mount[len-1] = '\0';
+
+		mosquitto_FREE(base_msg->data.topic);
+		base_msg->data.topic = topic_mount;
+	}
+
 	if(base_msg->data.payloadlen){
 		if(db.config->message_size_limit && base_msg->data.payloadlen > db.config->message_size_limit){
 			log__printf(NULL, MOSQ_LOG_DEBUG, "Dropped too large PUBLISH from %s (d%d, q%d, r%d, m%d, '%s', ... (%ld bytes))", context->id, dup, base_msg->data.qos, base_msg->data.retain, base_msg->data.source_mid, base_msg->data.topic, (long)base_msg->data.payloadlen);

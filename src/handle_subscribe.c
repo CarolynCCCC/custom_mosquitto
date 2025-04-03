@@ -178,7 +178,22 @@ int handle__subscribe(struct mosquitto *context)
 
 				mosquitto_FREE(sub.topic_filter);
 				sub.topic_filter = sub_mount;
+			}
 
+			/* Handle per-user mount point if enabled and not an admin user */
+			if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0){
+				len = strlen(context->username) + strlen(sub.topic_filter) + 2; /* +2 for '/' and null terminator */
+				sub_mount = mosquitto_malloc(len);
+				if(!sub_mount){
+					mosquitto_FREE(sub.topic_filter);
+					mosquitto_FREE(payload);
+					return MOSQ_ERR_NOMEM;
+				}
+				snprintf(sub_mount, len, "%s/%s", context->username, sub.topic_filter);
+				sub_mount[len-1] = '\0';
+
+				mosquitto_FREE(sub.topic_filter);
+				sub.topic_filter = sub_mount;
 			}
 
 			allowed = true;

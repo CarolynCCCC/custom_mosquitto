@@ -117,6 +117,14 @@ int send__publish(struct mosquitto *mosq, uint16_t mid, const char *topic, uint3
 			return MOSQ_ERR_SUCCESS;
 		}
 	}
+
+	/* Remove per-user mount point if enabled and not an admin user */
+	if(db.config->mount_point_per_user && mosq->username && strncmp(mosq->username, "admin", 5) != 0){
+		len = strlen(mosq->username) + 1; /* +1 for the '/' separator */
+		if(len < strlen(topic) && !strncmp(topic, mosq->username, strlen(mosq->username)) && topic[strlen(mosq->username)] == '/'){
+			topic += len;
+		}
+	}
 #ifdef WITH_BRIDGE
 	if(mosq->bridge && mosq->bridge->topics && mosq->bridge->topic_remapping){
 		LL_FOREACH(mosq->bridge->topics, cur_topic){

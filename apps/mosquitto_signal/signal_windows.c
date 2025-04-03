@@ -19,6 +19,16 @@ Contributors:
 #  define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
+#ifndef MOSQ_SIG_DEFINED
+#define MOSQ_SIG_DEFINED
+enum mosq_sig {
+    MOSQ_SIG_QUIT = 0,
+    MOSQ_SIG_RELOAD = 1,
+    MOSQ_SIG_STOP = 2,
+    MOSQ_SIG_RESTART = 3
+};
+#endif
+
 #include <psapi.h>
 
 #include <ctype.h>

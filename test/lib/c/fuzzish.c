@@ -15,11 +15,61 @@ static int proto_ver;
 #  define UNUSED(A) (void)(A)
 #endif
 
-static void signal_handler(int s)
+#ifdef _WIN32
+#include <windows.h>
+
+static BOOL WINAPI signal_handler(DWORD type)
 {
-	UNUSED(s);
-	run = 0;
+    switch(type) {
+        case CTRL_C_EVENT:
+        case CTRL_BREAK_EVENT:
+        case CTRL_CLOSE_EVENT:
+            run = 0;
+            return TRUE;
+        default:
+            return FALSE;
+    }
 }
+
+static int setup_signal_handler(void)
+{
+    if(!SetConsoleCtrlHandler(signal_handler, TRUE)) {
+        fprintf(stderr, "Error: Couldn't setup signal handler\n");
+        return 1;
+    }
+    return 0;
+}
+
+#else
+#include <signal.h>
+
+static void handle_sigterm(int signal)
+{
+    run = 0;
+}
+
+static int setup_signal_handler(void)
+{
+    struct sigaction act = { 0 };
+    act.sa_handler = handle_sigterm;
+    act.sa_flags = 0;
+
+    if(sigaction(SIGTERM, &act, NULL) < 0) {
+        fprintf(stderr, "Error: Couldn't setup signal handler\n");
+        return 1;
+    }
+    return 0;
+}
+#endif
+
+
+
+
+// static void signal_handler(int s)
+// {
+// 	UNUSED(s);
+// 	run = 0;
+// }
 
 static void prop_test(const mosquitto_property *props)
 {
@@ -349,15 +399,15 @@ static void on_log(struct mosquitto *mosq, void *obj, int level, const char *str
 }
 
 
-static void setup_signal_handler(void)
-{
-	struct sigaction act = { 0 };
+// static void setup_signal_handler(void)
+// {
+// 	struct sigaction act = { 0 };
 
-	act.sa_handler = &signal_handler;
-	if(sigaction(SIGTERM, &act, NULL) < 0) {
-		exit(1);
-	}
-}
+// 	act.sa_handler = &signal_handler;
+// 	if(sigaction(SIGTERM, &act, NULL) < 0) {
+// 		exit(1);
+// 	}
+// }
 
 int main(int argc, char *argv[])
 {

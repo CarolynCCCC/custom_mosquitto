@@ -761,7 +761,7 @@ static int net__socket_listen_tcp(struct mosquitto__listener *listener)
 	rc = getaddrinfo(listener->host, service, &hints, &ainfo);
 	if (rc){
 		log__printf(NULL, MOSQ_LOG_ERR, "Error creating listener: %s.", gai_strerror(rc));
-		return INVALID_SOCKET;
+		return (int)INVALID_SOCKET;
 	}
 
 	listener->sock_count = 0;
@@ -798,7 +798,7 @@ static int net__socket_listen_tcp(struct mosquitto__listener *listener)
 #endif
 #ifdef IPV6_V6ONLY
 		ss_opt = 1;
-		(void)setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, &ss_opt, sizeof(ss_opt));
+		(void)setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (const char *)&ss_opt, sizeof(ss_opt));
 #endif
 
 		if(net__socket_nonblock(&sock)){

@@ -372,6 +372,21 @@ static int will__read(struct mosquitto *context, const char *clientid, struct mo
 		will_struct->msg.topic = will_topic_mount;
 	}
 
+	/* Handle per-user mount point for Will message if enabled and not an admin user */
+	if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0){
+		slen = strlen(context->username) + strlen(will_struct->msg.topic) + 2; /* +2 for '/' and null terminator */
+		will_topic_mount = mosquitto_malloc(slen);
+		if(!will_topic_mount){
+			rc = MOSQ_ERR_NOMEM;
+			goto error_cleanup;
+		}
+		snprintf(will_topic_mount, slen, "%s/%s", context->username, will_struct->msg.topic);
+		will_topic_mount[slen-1] = '\0';
+
+		mosquitto_FREE(will_struct->msg.topic);
+		will_struct->msg.topic = will_topic_mount;
+	}
+
 	if(!strncmp(will_struct->msg.topic, "$CONTROL/", strlen("$CONTROL/"))){
 		rc = MOSQ_ERR_ACL_DENIED;
 		goto error_cleanup;

@@ -110,7 +110,8 @@ extern SERVICE_STATUS_HANDLE service_handle;
 			log__printf(NULL, MOSQ_LOG_ERR, "Error: The '%s' option requires plugin/global_plugin/plugin_load to be defined first.", (A)); \
 			return MOSQ_ERR_INVAL; \
 		} \
-	}while(0)
+	} \
+	while(0)
 
 #define OPTION_DEPRECATED(A, B) \
 	log__printf(NULL, MOSQ_LOG_NOTICE, "The '%s' option is now deprecated and will be removed in version 3.0. %s", (A), (B))
@@ -254,6 +255,7 @@ static void config__init_reload(struct mosquitto__config *config)
 
 	config->local_only = true;
 	config->allow_duplicate_messages = true;
+	config->mount_point_per_user = false; /* Default to false */
 
 	mosquitto_FREE(config->security_options.acl_file);
 	mosquitto_FREE(config->security_options.password_file);
@@ -2016,7 +2018,7 @@ static int config__read_file_core(struct mosquitto__config *config, bool reload,
 					if(config->message_size_limit > MQTT_MAX_PAYLOAD){
 						log__printf(NULL, MOSQ_LOG_ERR, "Error: Invalid 'message_size_limit' value (%u).", config->message_size_limit);
 						return MOSQ_ERR_INVAL;
-					}
+					} 
 				}else if(!strcmp(token, "mount_point")){
 					REQUIRE_LISTENER(token);
 					mosquitto_FREE(cur_listener->mount_point);
@@ -2027,13 +2029,6 @@ static int config__read_file_core(struct mosquitto__config *config, bool reload,
 								cur_listener->mount_point);
 						return MOSQ_ERR_INVAL;
 					}
-				}else if(!strcmp(token, "notifications")){
-#ifdef WITH_BRIDGE
-					REQUIRE_BRIDGE(token);
-					if(conf__parse_bool(&token, "notifications", &cur_bridge->notifications, &saveptr)) return MOSQ_ERR_INVAL;
-#else
-					log__printf(NULL, MOSQ_LOG_WARNING, "Warning: Bridge support not available.");
-#endif
 				}else if(!strcmp(token, "notifications_local_only")){
 #ifdef WITH_BRIDGE
 					REQUIRE_BRIDGE(token);
@@ -2491,6 +2486,8 @@ static int config__read_file_core(struct mosquitto__config *config, bool reload,
 #else
 					log__printf(NULL, MOSQ_LOG_WARNING, "Warning: Websockets support not available.");
 #endif
+										}else if(!strcmp(token, "mount_point_per_user")){
+					if(conf__parse_bool(&token, "mount_point_per_user", &config->mount_point_per_user, &saveptr)) return MOSQ_ERR_INVAL;
 				}else{
 					log__printf(NULL, MOSQ_LOG_ERR, "Error: Unknown configuration variable '%s'.", token);
 					return MOSQ_ERR_INVAL;

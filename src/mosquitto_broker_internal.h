@@ -321,6 +321,7 @@ struct mosquitto__config {
 	struct mosquitto__listener *listeners;
 	int listener_count;
 	bool local_only;
+	bool mount_point_per_user; /* Enable mount point per user */
 	unsigned int log_dest;
 	int log_facility;
 	unsigned int log_type;
