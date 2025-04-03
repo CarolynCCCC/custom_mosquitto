@@ -68,6 +68,15 @@ int handle__disconnect(struct mosquitto *context)
 			return MOSQ_ERR_PROTOCOL;
 		}
 	}
+	if(context->username){
+        char user_state_topic[256];
+        snprintf(user_state_topic, sizeof(user_state_topic), 
+                "$SYS/broker/user_state/%s", context->username);
+        char payload = '0';
+        db__messages_easy_queue(context, user_state_topic, 1, 1, 
+                              &payload, 1, MSG_EXPIRY_INFINITE, NULL);
+    }
+
 	if(reason_code == MQTT_RC_DISCONNECT_WITH_WILL_MSG){
 		mosquitto__set_state(context, mosq_cs_disconnect_with_will);
 	}else{

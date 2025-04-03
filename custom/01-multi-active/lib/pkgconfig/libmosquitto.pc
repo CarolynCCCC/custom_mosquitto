@@ -1,0 +1,10 @@
+prefix=C:/Program Files (x86)/mosquitto
+exec_prefix=${prefix}
+includedir=${prefix}/include
+libdir=${exec_prefix}/lib
+
+Name: mosquitto
+Description: mosquitto MQTT library (C bindings)
+Version: 2.1.0
+Cflags: -I${includedir}
+Libs: -L${libdir} -lmosquitto
