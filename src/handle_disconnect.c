@@ -75,6 +75,7 @@ int handle__disconnect(struct mosquitto *context)
         char payload = '0';
         db__messages_easy_queue(context, user_state_topic, 1, 1, 
                               &payload, 1, MSG_EXPIRY_INFINITE, NULL);
+
     }
 
 	if(reason_code == MQTT_RC_DISCONNECT_WITH_WILL_MSG){

@@ -222,6 +222,9 @@ void sys_tree__update(bool force)
 		len = (uint32_t)snprintf(buf, BUFLEN, "%" PRIu64 " seconds", (uint64_t)uptime);
 		db__messages_easy_queue(NULL, "$SYS/broker/uptime", SYS_TREE_QOS, len, buf, 1, MSG_EXPIRY_INFINITE, NULL);
 
+		/* Update active user list along with other system metrics */
+		gen_active_user_list(&db);
+
 		/*  Update metrics values where not otherwise updated */
 		metrics[mosq_gauge_message_store_count].next = db.msg_store_count;
 		metrics[mosq_gauge_message_store_bytes].next = (int64_t)db.msg_store_bytes;
