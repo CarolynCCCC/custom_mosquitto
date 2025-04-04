@@ -115,6 +115,8 @@ enum mosq_metric_load_type{
 void metrics__int_inc(enum mosq_metric_type m, int64_t value);
 void metrics__int_dec(enum mosq_metric_type m, int64_t value);
 
+void gen_active_user_list(struct mosquitto_db *db);
+
 #else
 #  define metrics__int_inc(A, B)
 #  define metrics__int_dec(A, B)

@@ -474,35 +474,44 @@
 # Persistence
 # =================================================================
 
-# Save persistent message data to disk (true/false).
-# This saves information about all messages, including
-# subscriptions, currently in-flight messages and retained
-# messages.
-# retained_persistence is a synonym for this option.
-persistence true
-
-# The filename to use for the persistent database, not including
-# the path.
-#persistence_file mosquitto.db
-
-# The directory to use for the persistent database. Must exist
-# and be writable by the mosquitto user.
-#persistence_location /var/lib/mosquitto/
-
-# If true, mosquitto will count the number of subscription changes, retained
-# messages received and queued messages and if the total exceeds
-# autosave_interval then the in-memory database will be saved to disk.
-# If false, mosquitto will save the in-memory database to disk by treating
-# autosave_interval as a time in seconds.
-autosave_on_changes true
-
 # If persistence is enabled, save the in-memory database to disk
 # every autosave_interval seconds. If set to 0, the persistence
 # database will only be written when mosquitto exits. See also
 # autosave_on_changes.
 # Note that writing of the persistence database can be forced by
 # sending mosquitto a SIGUSR1 signal.
-autosave_interval 30
+#autosave_interval 1800
+
+# If true, mosquitto will count the number of subscription changes, retained
+# messages received and queued messages and if the total exceeds
+# autosave_interval then the in-memory database will be saved to disk.
+# If false, mosquitto will save the in-memory database to disk by treating
+# autosave_interval as a time in seconds.
+#autosave_on_changes false
+
+# Save persistent message data to disk (true/false).
+# This saves information about all messages, including
+# subscriptions, currently in-flight messages and retained
+# messages.
+# retained_persistence is a synonym for this option.
+#persistence false
+
+# The filename to use for the persistent database, not including
+# the path.
+#persistence_file mosquitto.db
+
+# Location for persistent database.
+# Default is an empty string (current directory).
+# Set to e.g. /var/lib/mosquitto if running as a proper service on Linux or
+# similar.
+#
+# Can also be defined by setting the MOSQUITTO_PERSISTENCE_LOCATION environment
+# variable prior to running the broker. If both the config file option and the
+# environment variable are set, the environment variable takes precedent.
+#
+# This can also be used by plugins using the mosquitto_persistence_location() function.
+#persistence_location
+
 
 # =================================================================
 # Logging
@@ -616,7 +625,7 @@ autosave_interval 30
 # See the TLS client require_certificate and use_identity_as_username options
 # for alternative authentication options. If a plugin is used as well as
 # password_file, the plugin check will be made first.
-#password_file password.txt
+#password_file
 
 # Access may also be controlled using a pre-shared-key file. This requires
 # TLS-PSK support and a listener configured to use it. The file should be text

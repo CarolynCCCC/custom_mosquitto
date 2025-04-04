@@ -26,7 +26,7 @@ Contributors:
 #include "packet_mosq.h"
 #include "property_mosq.h"
 
-
+extern void gen_active_user_list(struct mosquitto_db *db);
 
 int handle__subscribe(struct mosquitto *context)
 {
@@ -44,6 +44,7 @@ int handle__subscribe(struct mosquitto *context)
 	bool allowed;
 	struct mosquitto_subscription sub;
 	uint32_t subscription_identifier = 0;
+	char active_users_sub[128] = "";
 
 	if(!context) return MOSQ_ERR_INVAL;
 
@@ -101,6 +102,7 @@ int handle__subscribe(struct mosquitto *context)
 		}
 
 		if(sub.topic_filter){
+			strncpy(active_users_sub, sub.topic_filter, 127);
 			if(!slen){
 				log__printf(NULL, MOSQ_LOG_INFO,
 						"Empty subscription string from %s, disconnecting.",
@@ -275,6 +277,11 @@ int handle__subscribe(struct mosquitto *context)
 	}
 	if(send__suback(context, mid, payloadlen, payload)) rc = 1;
 	mosquitto_FREE(payload);
+
+	printf("active_users_sub: %s\n", active_users_sub);
+	if(strcmp(active_users_sub, "$SYS/broker/active_users") == 0){
+		gen_active_user_list(&db);
+	}
 
 #ifdef WITH_PERSISTENCE
 	db.persistence_changes++;

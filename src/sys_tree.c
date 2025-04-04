@@ -276,4 +276,53 @@ void sys_tree__update(bool force)
 	}
 }
 
+void gen_active_user_list(struct mosquitto_db *db)
+{
+	if(!db) return;
+
+	const int buf_len = 1024*100;
+	char buf2[buf_len+20];
+	int off = 0;
+	struct mosquitto *context, *ctxt_tmp;
+	int n = 1;
+	bool has_users = false;
+
+	log__printf(NULL, MOSQ_LOG_DEBUG, "Generating active user list");
+	
+	HASH_ITER(hh_sock, db->contexts_by_sock, context, ctxt_tmp){
+		if(context && context->username){
+			has_users = true;
+			log__printf(NULL, MOSQ_LOG_DEBUG, "Active user: %s", context->username);
+			
+			// Check if we have enough space in the buffer
+			int needed = snprintf(NULL, 0, "\n%d - %s", n, context->username);
+			if(off + needed >= buf_len){
+				log__printf(NULL, MOSQ_LOG_WARNING, "Active user list buffer full, truncating");
+				break;
+			}
+			
+			off += snprintf(buf2+off, buf_len-off, "\n%d - %s", n++, context->username);
+		}
+	}
+
+	if(!has_users){
+		off = snprintf(buf2, buf_len, "No active users");
+	}
+
+	// Remove leading newline if present
+	if(buf2[0] == '\n'){
+		memmove(buf2, buf2+1, off);
+		off--;
+	}
+
+	if(has_users){
+		/* Queue the message to the topic */
+		db__messages_easy_queue(NULL, "$SYS/broker/active_users", SYS_TREE_QOS, strlen(buf2), buf2, 0, 0, NULL);
+	}else{
+		/* Queue empty message if no users */
+		db__messages_easy_queue(NULL, "$SYS/broker/active_users", SYS_TREE_QOS, strlen("No active users."), "No active users.", 0, 0, NULL);
+	}
+	log__printf(NULL, MOSQ_LOG_DEBUG, "Active user list generated with %d users", n-1);
+}
+
 #endif
