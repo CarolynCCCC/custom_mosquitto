@@ -19,6 +19,9 @@ Contributors:
 #ifndef SYS_TREE_H
 #define SYS_TREE_H
 
+#include "mosquitto_broker_internal.h"
+#include "uthash.h"
+
 #if defined(WITH_SYS_TREE) && defined(WITH_BROKER)
 
 /* This ordering *must* match the metrics array in sys_tree.c. */
@@ -112,14 +115,63 @@ enum mosq_metric_load_type{
 	mosq_metric_load_max,
 };
 
+/* User specific metric types */
+enum user_metric_type {
+	user_gauge_subscriptions_count = 0,
+	user_counter_messages_published = 1,
+	user_counter_bytes_published = 2,
+	user_metric_max
+};
+
+/* Metric structure definition */
+struct metric {
+	int64_t current;
+	int64_t next;
+	const char *topic;
+	const char *topic_alias;
+	bool is_max;
+};
+
+/* Structure for storing load metrics */
+struct metric_load {
+	double current;
+	char *topic;
+	enum mosq_metric_type load_ref;
+	int interval;
+};
+
+/* User metric structure */
+struct user_metric {
+	UT_hash_handle hh;  // UTHASH hash handle
+	char username[100];  // Username as key
+	struct metric metrics[user_metric_max];  // Per-user metrics
+	time_t last_seen;    // Last activity timestamp
+	int connectedCount;  // Number of active connections for this user
+	struct mosquitto__subhier *subscription_topics; // List of subscribed topics
+};
+
 void metrics__int_inc(enum mosq_metric_type m, int64_t value);
 void metrics__int_dec(enum mosq_metric_type m, int64_t value);
 
 void gen_active_user_list(struct mosquitto_db *db);
 
+/* User metric functions */
+void user_metrics__init(struct mosquitto *context);
+void user_metrics__cleanup(struct mosquitto *context);
+void user_metrics__update_subscription(struct mosquitto *context, const char *topic, bool subscribe);
+void user_metrics__update_publish(struct mosquitto *context, size_t payload_len);
+void user_metrics__update_last_seen(struct mosquitto *context);
+void user_metrics__publish_all(void);
+
 #else
 #  define metrics__int_inc(A, B)
 #  define metrics__int_dec(A, B)
+#  define user_metrics__init(A)
+#  define user_metrics__cleanup(A)
+#  define user_metrics__update_subscription(A, B, C)
+#  define user_metrics__update_publish(A, B)
+#  define user_metrics__update_last_seen(A)
+#  define user_metrics__publish_all()
 
 #endif
 

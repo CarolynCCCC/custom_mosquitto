@@ -25,6 +25,7 @@ Contributors:
 #include "send_mosq.h"
 #include "util_mosq.h"
 #include "will_mosq.h"
+#include "sys_tree.h"
 
 
 int handle__disconnect(struct mosquitto *context)
@@ -76,6 +77,10 @@ int handle__disconnect(struct mosquitto *context)
         db__messages_easy_queue(context, user_state_topic, 1, 1, 
                               &payload, 1, MSG_EXPIRY_INFINITE, NULL);
 
+        /* Clean up user metrics if enabled */
+        if(db.config->user_stats){
+            user_metrics__cleanup(context);
+        }
     }
 
 	if(reason_code == MQTT_RC_DISCONNECT_WITH_WILL_MSG){

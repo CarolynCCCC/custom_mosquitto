@@ -2486,8 +2486,15 @@ static int config__read_file_core(struct mosquitto__config *config, bool reload,
 #else
 					log__printf(NULL, MOSQ_LOG_WARNING, "Warning: Websockets support not available.");
 #endif
-										}else if(!strcmp(token, "mount_point_per_user")){
+				}
+				else if(!strcmp(token, "mount_point_per_user")){
 					if(conf__parse_bool(&token, "mount_point_per_user", &config->mount_point_per_user, &saveptr)) return MOSQ_ERR_INVAL;
+				}
+				else if(!strcmp(token, "user_stats")){
+					if(conf__parse_bool(&token, "user_stats", &config->user_stats, &saveptr)) return MOSQ_ERR_INVAL;
+				
+				}else if(!strcmp(token, "broadcast_topic")){
+					if(conf__parse_string(&token, "broadcast_topic", &config->broadcast_topic, &saveptr)) return MOSQ_ERR_INVAL;
 				}else{
 					log__printf(NULL, MOSQ_LOG_ERR, "Error: Unknown configuration variable '%s'.", token);
 					return MOSQ_ERR_INVAL;

@@ -25,6 +25,7 @@ Contributors:
 #include "mosquitto/mqtt_protocol.h"
 #include "packet_mosq.h"
 #include "send_mosq.h"
+#include "sys_tree.h"
 
 int handle__unsubscribe(struct mosquitto *context)
 {
@@ -137,6 +138,11 @@ int handle__unsubscribe(struct mosquitto *context)
 			}
 			rc = sub__remove(context, sub.topic_filter, &reason);
 			plugin_persist__handle_subscription_delete(context, sub.topic_filter);
+
+			/* Update user metrics for unsubscription */
+			if(context->username && db.config->user_stats){
+				user_metrics__update_subscription(context, sub.topic_filter, false);
+			}
 		}else{
 			rc = MOSQ_ERR_SUCCESS;
 		}

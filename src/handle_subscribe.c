@@ -25,6 +25,7 @@ Contributors:
 #include "mosquitto/mqtt_protocol.h"
 #include "packet_mosq.h"
 #include "property_mosq.h"
+#include "sys_tree.h"
 
 extern void gen_active_user_list(struct mosquitto_db *db);
 
@@ -184,18 +185,25 @@ int handle__subscribe(struct mosquitto *context)
 
 			/* Handle per-user mount point if enabled and not an admin user */
 			if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0){
-				len = strlen(context->username) + strlen(sub.topic_filter) + 2; /* +2 for '/' and null terminator */
-				sub_mount = mosquitto_malloc(len);
-				if(!sub_mount){
-					mosquitto_FREE(sub.topic_filter);
-					mosquitto_FREE(payload);
-					return MOSQ_ERR_NOMEM;
+				/* Check if the topic is not under the broadcast topic hierarchy */
+				bool is_broadcast = false;
+				if(db.config->broadcast_topic){
+					mosquitto_topic_matches_sub(db.config->broadcast_topic, sub.topic_filter, &is_broadcast);
 				}
-				snprintf(sub_mount, len, "%s/%s", context->username, sub.topic_filter);
-				sub_mount[len-1] = '\0';
+				if(!is_broadcast){
+					len = strlen(context->username) + strlen(sub.topic_filter) + 2; /* +2 for '/' and null terminator */
+					sub_mount = mosquitto_malloc(len);
+					if(!sub_mount){
+						mosquitto_FREE(sub.topic_filter);
+						mosquitto_FREE(payload);
+						return MOSQ_ERR_NOMEM;
+					}
+					snprintf(sub_mount, len, "%s/%s", context->username, sub.topic_filter);
+					sub_mount[len-1] = '\0';
 
-				mosquitto_FREE(sub.topic_filter);
-				sub.topic_filter = sub_mount;
+					mosquitto_FREE(sub.topic_filter);
+					sub.topic_filter = sub_mount;
+				}
 			}
 
 			allowed = true;
@@ -253,6 +261,11 @@ int handle__subscribe(struct mosquitto *context)
 				log__printf(NULL, MOSQ_LOG_SUBSCRIBE, "%s %d %s", context->id, qos, sub.topic_filter);
 
 				plugin_persist__handle_subscription_add(context, &sub);
+
+				/* Update user metrics for subscription */
+				if(context->username && db.config->user_stats){
+					user_metrics__update_subscription(context, sub.topic_filter, true);
+				}
 			}
 			mosquitto_FREE(sub.topic_filter);
 

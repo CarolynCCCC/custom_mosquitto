@@ -49,6 +49,7 @@ int handle__publish(struct mosquitto *context)
 	int topic_alias = -1;
 	uint8_t reason_code = 0;
 	uint16_t mid = 0;
+	bool is_broadcast = false;
 
 	if(context->state != mosq_cs_active){
 		return MOSQ_ERR_PROTOCOL;
@@ -180,17 +181,25 @@ int handle__publish(struct mosquitto *context)
 
 	/* Handle per-user mount point if enabled and not an admin user */
 	if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0){
-		len = strlen(context->username) + strlen(base_msg->data.topic) + 2; /* +2 for '/' and null terminator */
-		topic_mount = mosquitto_malloc(len);
-		if(!topic_mount){
-			db__msg_store_free(base_msg);
-			return MOSQ_ERR_NOMEM;
+		/* Check if the topic is not under the broadcast topic hierarchy */
+		if(db.config->broadcast_topic){
+			mosquitto_topic_matches_sub(db.config->broadcast_topic, base_msg->data.topic, &is_broadcast);
 		}
-		snprintf(topic_mount, len, "%s/%s", context->username, base_msg->data.topic);
-		topic_mount[len-1] = '\0';
+		
+		/* Only apply mount point if it's not a broadcast topic */
+		if(!is_broadcast){
+			len = strlen(context->username) + strlen(base_msg->data.topic) + 2; /* +2 for '/' and null terminator */
+			topic_mount = mosquitto_malloc(len);
+			if(!topic_mount){
+				db__msg_store_free(base_msg);
+				return MOSQ_ERR_NOMEM;
+			}
+			snprintf(topic_mount, len, "%s/%s", context->username, base_msg->data.topic);
+			topic_mount[len-1] = '\0';
 
-		mosquitto_FREE(base_msg->data.topic);
-		base_msg->data.topic = topic_mount;
+			mosquitto_FREE(base_msg->data.topic);
+			base_msg->data.topic = topic_mount;
+		}
 	}
 
 	if(base_msg->data.payloadlen){

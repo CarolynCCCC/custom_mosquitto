@@ -214,11 +214,11 @@ int connect__on_authorised(struct mosquitto *context, void *auth_data_out, uint1
 			if(context->username){
 				log__printf(NULL, MOSQ_LOG_NOTICE, "New client connected from %s:%d as %s (p%d, c%d, k%d, u'%s').",
 						context->address, context->remote_port, context->id, context->protocol, context->clean_start, context->keepalive, context->username);
-				// Publish user state for connected user
-				char user_state_topic[256];
-				snprintf(user_state_topic, sizeof(user_state_topic), "$SYS/broker/user_state/%s", context->username);
-				char payload = '1';
-				db__messages_easy_queue(context, user_state_topic, 1, 1, &payload, 1, MSG_EXPIRY_INFINITE, NULL);
+				
+				/* Initialize user metrics if enabled */
+				if(db.config->user_stats){
+					user_metrics__init(context);
+				}
 			}else{
 				log__printf(NULL, MOSQ_LOG_NOTICE, "New client connected from %s:%d as %s (p%d, c%d, k%d).",
 						context->address, context->remote_port, context->id, context->protocol, context->clean_start, context->keepalive);
@@ -1003,6 +1003,7 @@ int handle__connect(struct mosquitto *context)
 			goto handle_connect_error;
 		}
 	}
+
 	context->clean_start = clean_start;
 	context->will = will_struct;
 	will_struct = NULL;

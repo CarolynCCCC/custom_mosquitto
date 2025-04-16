@@ -222,3 +222,10 @@ if(WITH_TESTS)
 	enable_testing()
 	add_subdirectory(test)
 endif()
+
+# Set installation directories
+if(WIN32)
+    set(CMAKE_INSTALL_PREFIX "C:/Program Files/mosquitto" CACHE PATH "Installation directory" FORCE)
+else()
+    set(CMAKE_INSTALL_PREFIX "/usr/local" CACHE PATH "Installation directory" FORCE)
+endif()
