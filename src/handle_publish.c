@@ -179,27 +179,24 @@ int handle__publish(struct mosquitto *context)
 		base_msg->data.topic = topic_mount;
 	}
 
-	/* Handle per-user mount point if enabled and not an admin user */
-	if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0){
-		/* Check if the topic is not under the broadcast topic hierarchy */
-		if(db.config->broadcast_topic){
-			mosquitto_topic_matches_sub(db.config->broadcast_topic, base_msg->data.topic, &is_broadcast);
-		}
-		
-		/* Only apply mount point if it's not a broadcast topic */
-		if(!is_broadcast){
-			len = strlen(context->username) + strlen(base_msg->data.topic) + 2; /* +2 for '/' and null terminator */
-			topic_mount = mosquitto_malloc(len);
-			if(!topic_mount){
-				db__msg_store_free(base_msg);
-				return MOSQ_ERR_NOMEM;
-			}
-			snprintf(topic_mount, len, "%s/%s", context->username, base_msg->data.topic);
-			topic_mount[len-1] = '\0';
+	/* Check if the topic is a broadcast topic first */
+	if(db.config->broadcast_topic){
+		mosquitto_topic_matches_sub(base_msg->data.topic, db.config->broadcast_topic, &is_broadcast);
+	}
 
-			mosquitto_FREE(base_msg->data.topic);
-			base_msg->data.topic = topic_mount;
+	/* Handle per-user mount point if enabled and not an admin user */
+	if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0 && !is_broadcast){
+		len = strlen(context->username) + strlen(base_msg->data.topic) + 2; /* +2 for '/' and null terminator */
+		topic_mount = mosquitto_malloc(len);
+		if(!topic_mount){
+			db__msg_store_free(base_msg);
+			return MOSQ_ERR_NOMEM;
 		}
+		snprintf(topic_mount, len, "%s/%s", context->username, base_msg->data.topic);
+		topic_mount[len-1] = '\0';
+
+		mosquitto_FREE(base_msg->data.topic);
+		base_msg->data.topic = topic_mount;
 	}
 
 	if(base_msg->data.payloadlen){
@@ -300,6 +297,9 @@ int handle__publish(struct mosquitto *context)
 			dup = 0;
 			rc = db__message_store(context, base_msg, &message_expiry_interval, mosq_mo_client);
 			if(rc) return rc;
+			
+			/* Update user metrics for published message */
+			user_metrics__update_publish(context, base_msg->data.payloadlen);
 		}else{
 			/* Client isn't allowed any more incoming messages, so fail early */
 			reason_code = MQTT_RC_QUOTA_EXCEEDED;
@@ -314,6 +314,9 @@ int handle__publish(struct mosquitto *context)
 		stored = cmsg_stored->base_msg;
 		cmsg_stored->data.dup++;
 		dup = cmsg_stored->data.dup;
+		
+		/* Update user metrics for published message */
+		user_metrics__update_publish(context, stored->data.payloadlen);
 	}
 
 	switch(stored->data.qos){

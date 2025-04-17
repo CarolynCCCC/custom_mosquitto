@@ -166,12 +166,13 @@ void user_metrics__init(struct mosquitto *context)
 		um->metrics[user_counter_bytes_published].is_max = false;
 		
 		um->connectedCount = 0;  // Initialize connection count to 0
+		um->last_seen = time(NULL);  // Initialize last seen timestamp
 		
 		HASH_ADD_STR(user_metrics, username, um);
 	}
 	
 	um->connectedCount++;  // Increment connection count
-	um->last_seen = time(NULL);  // Use real time instead of monotonic time
+	um->last_seen = time(NULL);  // Update last seen timestamp
 }
 
 /* Cleanup user metrics when a client disconnects */
@@ -187,8 +188,26 @@ void user_metrics__cleanup(struct mosquitto *context)
 		
 		// Only remove the user metric if there are no more connections
 		if(um->connectedCount <= 0){
+			// Free the topic strings
+			if(um->metrics[user_counter_messages_published].topic)
+				free(um->metrics[user_counter_messages_published].topic);
+			if(um->metrics[user_counter_bytes_published].topic)
+				free(um->metrics[user_counter_bytes_published].topic);
+			
+			// Keep the last seen timestamp in the metrics
+			time_t last_seen = um->last_seen;
+			
 			HASH_DEL(user_metrics, um);
 			free(um);
+			
+			// Create a new metric entry just for last seen
+			um = calloc(1, sizeof(struct user_metric));
+			if(um){
+				strncpy(um->username, context->username, sizeof(um->username)-1);
+				um->last_seen = last_seen;
+				um->connectedCount = 0;
+				HASH_ADD_STR(user_metrics, username, um);
+			}
 		}
 	}
 }

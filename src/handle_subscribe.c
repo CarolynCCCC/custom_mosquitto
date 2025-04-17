@@ -183,27 +183,26 @@ int handle__subscribe(struct mosquitto *context)
 				sub.topic_filter = sub_mount;
 			}
 
-			/* Handle per-user mount point if enabled and not an admin user */
-			if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0){
-				/* Check if the topic is not under the broadcast topic hierarchy */
-				bool is_broadcast = false;
-				if(db.config->broadcast_topic){
-					mosquitto_topic_matches_sub(db.config->broadcast_topic, sub.topic_filter, &is_broadcast);
-				}
-				if(!is_broadcast){
-					len = strlen(context->username) + strlen(sub.topic_filter) + 2; /* +2 for '/' and null terminator */
-					sub_mount = mosquitto_malloc(len);
-					if(!sub_mount){
-						mosquitto_FREE(sub.topic_filter);
-						mosquitto_FREE(payload);
-						return MOSQ_ERR_NOMEM;
-					}
-					snprintf(sub_mount, len, "%s/%s", context->username, sub.topic_filter);
-					sub_mount[len-1] = '\0';
+			/* Check if the topic is a broadcast topic first */
+			bool is_broadcast = false;
+			if(db.config->broadcast_topic){
+				mosquitto_topic_matches_sub(sub.topic_filter, db.config->broadcast_topic, &is_broadcast);
+			}
 
+			/* Handle per-user mount point if enabled and not an admin user */
+			if(db.config->mount_point_per_user && context->username && strncmp(context->username, "admin", 5) != 0 && !is_broadcast){
+				len = strlen(context->username) + strlen(sub.topic_filter) + 2; /* +2 for '/' and null terminator */
+				sub_mount = mosquitto_malloc(len);
+				if(!sub_mount){
 					mosquitto_FREE(sub.topic_filter);
-					sub.topic_filter = sub_mount;
+					mosquitto_FREE(payload);
+					return MOSQ_ERR_NOMEM;
 				}
+				snprintf(sub_mount, len, "%s/%s", context->username, sub.topic_filter);
+				sub_mount[len-1] = '\0';
+
+				mosquitto_FREE(sub.topic_filter);
+				sub.topic_filter = sub_mount;
 			}
 
 			allowed = true;
